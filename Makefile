@@ -34,7 +34,7 @@ deploy-fe:
 do-deploy-%: %.tmp.yaml
 	@echo "*** $(PREFIX): $(@) ***:"
 	@nova list|grep -q -w -- '$(PREFIX)-$(*)' && exit 0; \
-	    set -x;sleep 2;./nova-boot.sh $(PREFIX)-$(*) $(*).tmp.yaml $(EXTRA)
+	    set -x;sleep 2;chmod +x *.sh;./nova-boot.sh $(PREFIX)-$(*) $(*).tmp.yaml $(EXTRA)
 
 destroy-%:
 	@nova list|awk '/\<$(PREFIX)-$(*)\>/ { print $$2 }' | xargs -rtl1 nova delete
