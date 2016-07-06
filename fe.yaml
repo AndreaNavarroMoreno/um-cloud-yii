@@ -28,7 +28,7 @@ _foo: &DEPLOY_SH |
   service haproxy restart
 
   # truchisimo pero bueh, ver http://www.serverphorums.com/read.php?10,1248602
-  sleep 150
+  sleep 300
   service haproxy restart
   echo "*** INFO: END $0 $*"
 
