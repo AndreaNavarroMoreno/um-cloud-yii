@@ -16,7 +16,7 @@ Web:
   
   *El framework y sus extensiones se descargan de internet por lo que las web tardan en cargar, PACIENCIA :)
   
-  ##Instalación
+  ## Instalación
   
   git clone https://github.com/AndreaNavarroMoreno/um-cloud-yii
   
