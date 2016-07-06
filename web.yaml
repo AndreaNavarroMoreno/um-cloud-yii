@@ -56,10 +56,10 @@ _foo: &DEPLOYYII_SH |
   cd /var/www/html
   composer global require "fxp/composer-asset-plugin:~1.1.1"
   echo "Creando proyecto..."
-  composer create-project --prefer-dist yiisoft/yii2-app-basic basic
-  composer global require --dev --prefer-dist yiisoft/yii2-gii
+  composer create-project --prefer-source yiisoft/yii2-app-basic basic
+  composer global require --dev --prefer-source yiisoft/yii2-gii
   cd basic
-  composer require toriphes/yii2-console-runner "*"
+  composer require --prefer-source toriphes/yii2-console-runner "*"
   #Configurar conexion db
   rm /var/www/html/basic/config/db.php
   cat <<-EOF > /var/www/html/basic/config/db.php
