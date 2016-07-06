@@ -1,7 +1,11 @@
 # um-cloud.yii
+@Autor: Andrea Navarro
+@User: anavarro
 
-Autor: Andrea Navarro / anavarro
-Software: Framework Yii2
--La aplicación instala el framework y genera ABM para cada tabla encontrada en la base de datos a la que se conecta
--Makefile permite configurar la cantidad de nodos web a deployar
+Web:
+-Instala el framework Yii2
+-Instala extensiones
+-Conecta con la base de datos
+-Genera ABM (Modelo, controlador y vista) para cada tabla de la base de datos
+-Crea accesos a los ABM en la página principal
 -El framework y sus extensiones se descargan de internet por lo que las web tardan en cargar, PACIENCIA :)
