@@ -2,7 +2,8 @@
 #### @Autor: Andrea Navarro
 #### @User: anavarro
 
-*Web:
+Web:
+
   *Instala el framework Yii2
   
   *Instala extensiones
