@@ -72,7 +72,7 @@ _foo: &HAPROXY_CONF |
       default_backend web-nodes
   
   backend web-nodes
-      balance leastconn
+      balance source
       mode http
       option httpchk GET /
 
