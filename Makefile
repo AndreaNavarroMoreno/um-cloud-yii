@@ -13,7 +13,7 @@ help:
 # Validacion y seteo de ENV movido al final para permitir
 # bash auto-completion
 
-NWEB = 3
+NWEB = 2
 
 deploy:       deploy-db       deploy-web       deploy-fe
 destroy:      destroy-db      destroy-web      destroy-fe
