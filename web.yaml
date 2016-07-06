@@ -1,0 +1,298 @@
+#cloud-config
+apt_proxy: http://172.16.16.1:8000/
+http_proxy: http://172.16.16.1:8000/
+apt_update: true
+
+_foo: &SSH_KEY "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDE2/sW+LvzjlXBYx0pas17yuV7pSQeXOYAPwe8Z54md9o5doMg845JaNCofxARxLSqSVPhnUjvUNDYFaYzxU0J4+xGHjVNJbyPCzxWrlIajVvvoEPXw88uDJVYaLoc3r04u8Qh0R/eN5v/qtDidc4+uVL6L4VMaHEzQykYg9LiYgdVxJ/2kFLgbM1jXmho4nJRopsTCGDMKLpg+CSdvbdwOKuQAQbj4e6fvvOQQA69Q7Or+74LsX+T0YTWnDjFklGpCYLvz75lkB2pQCXa5yMI0XIaqbKgVMpG9Qi4q48LXUTKGpLDZndyxHjhn8A47WABiLZdG+l8BRI56s4VlpiH d1cor@sapito"
+
+users:
+  - name: ubuntu
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh-authorized-keys:
+      - *SSH_KEY
+    ssh-import-id: [jjo, navarrow, "EDITAR_LP"]
+    lock_passwd: true
+
+#apt_update: true
+
+packages:
+  - unzip
+  - apache2
+  - phpmyadmin
+  - php7.0-mbstring
+
+
+
+_foo: &DEPLOY_SH |
+  #!/bin/bash
+  #Descargamos consul
+  cd /tmp
+  wget http://192.168.3.251/consul/0.6.4/consul_0.6.4_linux_amd64.zip
+  unzip *.zip
+  cp consul /usr/local/sbin
+  #creamos users dirs para consul
+  useradd -d /var/consul -m consul
+  mkdir -p /etc/consul.d
+  # Mostramos resultado
+  my_ip=$(ip r get 1 | sed -nr 's/.*src (\S+).*/\1/p')
+  echo "*** INFO: READY, browse:"
+  echo "    http://${my_ip?}/php-mysql"
+  echo "*** INFO: END $0 $*"
+  sleep 20
+  exit 0
+
+
+
+_foo: &DEPLOYYII_SH |
+
+  #Descargar composer
+  export HOME=/home/ubuntu
+  echo "Descargando composer..."
+  curl -sS https://getcomposer.org/installer | php
+  mv composer.phar /usr/local/bin/composer
+  #Instalar plugin y crear proyecto
+  echo "Instalando plugin..."
+  cd /var/www/html
+  composer global require "fxp/composer-asset-plugin:~1.1.1"
+  echo "Creando proyecto..."
+  composer create-project --prefer-dist yiisoft/yii2-app-basic basic
+  composer global require --dev --prefer-dist yiisoft/yii2-gii
+  cd basic
+  composer require toriphes/yii2-console-runner "*"
+  #Configurar conexion db
+  rm /var/www/html/basic/config/db.php
+  cat <<-EOF > /var/www/html/basic/config/db.php
+  <?php
+  return [
+    'class' => 'yii\db\Connection',
+    'dsn' => 'mysql:host=EDITAR_ENV-EDITAR_USUARIO-db.node.cloud.um.edu.ar;dbname=yii2basic',
+    'username' => 'yiiuser',
+    'password' => 'supersecretisimo',
+    'charset' => 'utf8',
+  ];
+  EOF
+  cd /var/www/html/basic
+  sed -i "80 a 'language'=>'es',", config/web.php
+  #Agregando comando generador
+  mv /var/www/html/GenerarController.php /var/www/html/basic/commands/
+  #Ejecutando comando generador de ABM
+  ./yii generar
+  #Creando menu en entrada
+  mv /var/www/html/generados.php /var/www/html/basic/views/site/
+  sed -i '11,15d' /var/www/html/basic/views/site/index.php
+  sed -i '10i <p class="lead"><?php include "generados.php";?></p>' /var/www/html/basic/views/site/index.php
+  sed -i '11i "enableCsrfValidation" => false,' /var/www/html/basic/config/web.php
+
+  echo "Restarteando apache"
+  service apache2 restart
+
+_foo: &CONSOLE_FILE |
+  <?php
+  namespace app\commands;
+  use Yii;
+  use yii\console\Controller;
+  use toriphes\console\Runner;
+  class GenerarController extends Controller
+  {
+    public function actionIndex()
+    {
+       $connection = Yii::$app->db;//get connection
+       $dbSchema = $connection->schema;
+       $tables = $dbSchema->getTableNames();//returns array of tbl schema's
+     foreach($tables as $tbl)
+     {
+       $runner = new Runner();
+       $may=ucfirst($tbl);
+       $runner->run('gii/model --tableName='.$tbl.' --modelClass='.$may, $output);
+       echo $output; //prints the command output
+       $runner->run('gii/crud --enableI18N=1 --modelClass="app\models\\'.$may.'" --controllerClass="app\controllers\\'.$may.'Controller"');
+        echo $output; //prints the command output
+     }        
+    }
+  }
+
+_foo: &INDEX |
+  <?php
+  use Yii;
+  use yii\helpers\Url;
+  $connection = Yii::$app->db;//get connection
+  $dbSchema = $connection->schema;
+  $tables = $dbSchema->getTableNames();//returns array of tbl schema's
+  echo '<h1>ABM generados</h1>';
+  echo '<p class="lead">ABM generados de la base de datos </p>'; 
+  foreach($tables as $tbl)
+  {
+  $may=ucfirst($tbl);
+  echo '<p><a class="btn btn-lg btn-success" href="'.Url::to([strtolower($tbl.'/index')]).'">'.$may.'</a></p>';
+  }
+  ?>
+  
+_foo: &CONSUL_CONF |
+  {
+    "server": false,
+    "datacenter": "um-01",
+    "data_dir": "/var/consul",
+    "encrypt": "GIMbRTkH/rLwqjOWrMzrcw==",
+    "log_level": "INFO",
+    "domain": "cloud.um.edu.ar",
+    "enable_syslog": true,
+    "start_join": ["192.168.3.130"]
+  }
+
+_foo: &CONSUL_SERVICE |
+  {
+    "service":
+      {
+        "name": "web",
+        "tags": ["apache"],
+        "port": 80
+      }
+  }
+
+_foo: &CONSUL_INIT |
+  #! /bin/sh
+  ### BEGIN INIT INFO
+  # Provides:          consul
+  # Required-Start:    $syslog $time $remote_fs
+  # Required-Stop:     $syslog $time $remote_fs
+  # Default-Start:     2 3 4 5
+  # Default-Stop:      0 1 6
+  # Short-Description: Services/nodes/kv discovery and storage
+  # Description:       Debian init script for the consul agent
+  ### END INIT INFO
+  #
+  # Author:            Diego Navarro <navarrow@gmail.com>
+  #
+
+  PATH=/bin:/usr/bin:/sbin:/usr/sbin
+  DAEMON=/usr/local/sbin/consul
+  PIDFILE=/var/run/consul
+
+  test -x $DAEMON || exit 0
+
+  . /lib/lsb/init-functions
+
+  case "$1" in
+    start)
+          log_daemon_msg "Starting consul agent" "consul"
+          start_daemon -p $PIDFILE $DAEMON agent -config-dir /etc/consul.d -client 0.0.0.0
+          log_end_msg $?
+      ;;
+    stop)
+          log_daemon_msg "Stoping consul agent" "consul"
+          killproc -p $PIDFILE $DAEMON
+          log_end_msg $?
+      ;;
+    force-reload|restart)
+      $0 stop
+      $0 start
+      ;;
+    status)
+      status_of_proc -p $PIDFILE $DAEMON consul && exit 0 || exit $?
+      ;;
+    *)
+      echo "Usage: /etc/init.d/consul {start|stop|restart|force-reload|status}"
+      exit 1
+      ;;
+  esac
+  exit 0
+ 
+ 
+_foo: &CONFIG_APACHE_SH |
+  #!/bin/bash
+  echo "__________________________ APACHE________________________"
+  METADATA=http://169.254.169.254/latest/meta-data/
+  public_hostname=$(curl -s $METADATA/public-hostname)
+  public_hostname=EDITAR_ENV-EDITAR_USUARIO-web.node.cloud.um.edu.ar
+  public_ipv4=$(curl -s $METADATA/public-ipv4)
+  local_ipv4=$(curl -s $METADATA/local-ipv4)
+  # jjo: add .conf (required by more recent apache-s)
+  cat > /etc/apache2/sites-available/yii.conf <<EOF
+  <VirtualHost *:80>
+      UseCanonicalName off
+      Options All
+      ServerAdmin webmaster@localhost
+      #ServerName $public_hostname
+      ServerAlias $local_ipv4
+      VirtualDocumentRoot /var/www/html/basic/web
+      <Directory \"/var/www/html/basic/web\">
+            RewriteEngine on
+            RewriteCond %{REQUEST_FILENAME} !-f
+            RewriteCond %{REQUEST_FILENAME} !-d
+            RewriteRule . index.php
+      </Directory>
+      ErrorLog \${APACHE_LOG_DIR}/yii-error.log
+      LogLevel warn
+      CustomLog \${APACHE_LOG_DIR}/yii-access.log combined
+  </VirtualHost>
+  EOF
+  a2enmod rewrite vhost_alias
+  a2dissite 000-default
+  rm /var/www/html/index.html
+  a2ensite yii
+  service apache2 restart
+
+  #Datos autorizacion composer
+_foo: &AUTH_JSON |
+  {
+    "github-oauth": {
+    "github.com": "444b49d18e3643904f6464d14969ef0f7266e6ff"
+    }
+   
+  }
+
+
+groups:
+  - umcloud
+users:
+  - name: ubuntu
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh-authorized-keys:
+      - *SSH_KEY
+    ssh-import-id: [jjo, navarrow, "EDITAR_LP"]
+    lock_passwd: true
+
+write_files:
+  - content: *DEPLOY_SH
+    path: /usr/local/src/deploy.sh
+    permissions: '0755'
+  - content: *DEPLOYYII_SH
+    path: /usr/local/src/deployyii.sh
+    permissions: '0755'
+  - content: *CONSUL_CONF
+    path: /etc/consul.d/client.json
+    permissions: '0644'
+  - content: *CONSUL_SERVICE
+    path: /etc/consul.d/wp.json
+    permissions: '0644'
+  - content: *CONSUL_INIT
+    path: /etc/init.d/consul
+    permissions: '0755'
+  - content: *AUTH_JSON
+    path: "/home/ubuntu/.composer/auth.json"
+    permissions: '0644'
+  - content: *CONFIG_APACHE_SH
+    path: /usr/local/src/config_apache.sh
+    permissions: '0755'
+  - content: *CONSOLE_FILE
+    path: /var/www/html/GenerarController.php
+    permissions: '0755'
+  - content: *INDEX
+    path: /var/www/html/generados.php
+    permissions: '0755'
+
+
+
+
+
+runcmd:
+ - [ /usr/local/src/config_apache.sh ]
+ - [ /usr/local/src/deployyii.sh ]
+ - [ /usr/local/src/deploy.sh ]
+ - [ update-rc.d, consul, defaults ]
+ - [ service, consul, start ]
+ - [ service, apache2, restart ]
+ - [ service, postfix, reload ]
+ - [ /tmp/config_mysql.sh ]
