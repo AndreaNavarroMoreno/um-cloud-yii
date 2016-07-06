@@ -4,17 +4,17 @@
 
 Web:
 
-  *Instala el framework Yii2
+  -Instala el framework Yii2
   
-  *Instala extensiones
+  -Instala extensiones
   
-  *Conecta con la base de datos
+  -Conecta con la base de datos
   
-  *Genera ABM (Modelo, controlador y vista) para cada tabla que encuentra en la base de datos
+  -Genera ABM (Modelo, controlador y vista) para cada tabla que encuentra en la base de datos
   
-  *Crea accesos a los ABM en la página principal
+  -Crea accesos a los ABM en la página principal
   
-  *El framework y sus extensiones se descargan de internet por lo que las web tardan en cargar, PACIENCIA :)
+  -El framework y sus extensiones se descargan de internet por lo que las web tardan en cargar, PACIENCIA :)
   
   ## Instalación
   
@@ -23,3 +23,8 @@ Web:
   cd um-cloud-yii/
   
   make deploy ENV=prod
+  
+  ### TODO
+ 
+ -Modificar Makefile para permitir seleccionar la base de datos a utilizar
+  
